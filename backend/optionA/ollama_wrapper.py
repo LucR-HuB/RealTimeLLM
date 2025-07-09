@@ -1,20 +1,16 @@
 import pathlib, subprocess, pandas as pd, json
 
-# ─────── Chemins ─────────────────────────────────────────────
-ROOT = pathlib.Path(__file__).resolve().parents[2]   # …/RealTimeLLM
+ROOT = pathlib.Path(__file__).resolve().parents[2]  
 DATA_FILE = ROOT / "data" / "Luc_run_data_with_coords.xlsx"
 
-# ─────── Chargement du fichier Excel ────────────────────────
 DATA = pd.read_excel(DATA_FILE, engine="openpyxl")
 
-# polyline complète sous forme [[lat, lng], …]
 ROUTE = DATA[["Lat", "Lng"]].values.tolist()
 
 def get_route():
     """Retourne la route complète pour le front."""
     return ROUTE
 
-# ─────── Prompts LLM ────────────────────────────────────────
 SYSTEM = (
     "You are an enthusiastic, concise running coach. "
     "Answer in ONE sentence (≤25 words). No extra text."
@@ -42,4 +38,4 @@ def ask_ollama(prompt, model="gemma:latest"):
     )
     if res.returncode != 0:
         raise RuntimeError(res.stderr.strip())
-    return res.stdout.strip().split("\n")[0]  # première phrase
+    return res.stdout.strip().split("\n")[0]  

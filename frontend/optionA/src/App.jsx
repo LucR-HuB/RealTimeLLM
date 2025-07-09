@@ -1,4 +1,5 @@
-import MapRunGl from "./MapRun_gl";
+import MapRunBuilder from "./MapRunBuilder";
+
 export default function App() {
-  return <MapRunGl />;
+  return <MapRunBuilder />;
 }

@@ -6,7 +6,6 @@ from .ollama_wrapper import DATA, build_prompt, ask_ollama, get_route
 
 app = FastAPI(title="Realtime LLM Coach – Option A")
 
-# ─────── CORS pour le front Vite (port 5173) ────────────────
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:5173"],
@@ -14,7 +13,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# ─────── schéma entrée /status ───────────────────────────────
 class LLMRequest(BaseModel):
     index: int
 

@@ -1,26 +1,15 @@
-/* ──────────────────────────────────────────────────────────
-   Tailwind – laisse ces trois lignes si tu veux utiliser
-   les classes utilitaires (sinon remplace ou retire-les)
-   ────────────────────────────────────────────────────────── */
    @tailwind base;
    @tailwind components;
    @tailwind utilities;
    .mapboxgl-ctrl-logo,
    .mapboxgl-ctrl-attrib { display: none !important; }
-   /* ──────────────────────────────────────────────────────────
-      Hauteur pleine page pour root et éléments parents
-      ────────────────────────────────────────────────────────── */
+
    html,
    body,
    #root {
      height: 100%;
-     margin: 0;           /* PAS de flex-centering ici sinon la carte rétrécit */
+     margin: 0;          
    }
-   
-   /* ──────────────────────────────────────────────────────────
-      Style générique Vite / boiler-plate
-      (tu peux les garder ou les ajuster)
-      ────────────────────────────────────────────────────────── */
    :root {
      font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
      line-height: 1.5;
@@ -81,9 +70,6 @@
      }
    }
    
-   /* ──────────────────────────────────────────────────────────
-      Leaflet doit remplir tout l’espace attribué au conteneur
-      ────────────────────────────────────────────────────────── */
    .leaflet-container {
      width: 100%;
      height: 100%;

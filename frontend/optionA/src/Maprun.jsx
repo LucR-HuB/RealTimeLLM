@@ -1,68 +1,65 @@
-import { useEffect, useState, useRef, useCallback } from "react";
-import Map, { Marker, Source, Layer } from "react-map-gl/maplibre";
-import "maplibre-gl/dist/maplibre-gl.css";
+import { useEffect, useRef, useState } from "react";
+import { MapContainer, TileLayer, Polyline, Marker } from "react-leaflet";
+import L from "leaflet";
 import { fetchStatus } from "./api";
+import "leaflet/dist/leaflet.css";
 
-export default function MapRunGl() {
-  const [route, setRoute] = useState([]);
+delete L.Icon.Default.prototype._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl:
+    "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
+  iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
+  shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
+});
+
+export default function MapRun({ route }) {
   const [idx, setIdx] = useState(0);
-  const [msg, setMsg] = useState("Click Ask Coach");
-  const mapRef = useRef();
+  const [msg, setMsg] = useState("Click ‘Ask Coach’ to get feedback");
+  const mapRef = useRef(null);
 
-  // → charger l'itinéraire depuis le backend
   useEffect(() => {
-    fetch("http://localhost:8000/route")
-      .then((r) => r.json())
-      .then(setRoute);
-  }, []);
-
-  // → simulation d'avancement
-  useEffect(() => {
-    if (!route.length) return;
     const id = setInterval(() => setIdx((i) => (i + 1) % route.length), 2000);
     return () => clearInterval(id);
-  }, [route]);
+  }, [route.length]);
 
-  // → bouton Ask Coach
-  const handleAsk = useCallback(async () => {
+  useEffect(() => {
+    if (mapRef.current) mapRef.current.setView(route[idx], mapRef.current.getZoom());
+  }, [idx, route]);
+
+  async function handleAsk() {
     try {
       const data = await fetchStatus(idx);
       setMsg(`[${data.km} km] ${data.message}`);
-    } catch (e) {
-      setMsg("⚠️ " + e.message);
+    } catch (err) {
+      setMsg("⚠️ " + err.message);
     }
-  }, [idx]);
-
-  if (!route.length) return <p>Loading route…</p>;
-
-  const current = route[idx];
-  const geojson = {
-    type: "Feature",
-    geometry: { type: "LineString", coordinates: route.map(([lat, lng]) => [lng, lat]) },
-  };
+  }
 
   return (
     <div style={{ height: "100vh", width: "100vw", display: "flex", flexDirection: "column" }}>
-      <Map
-        initialViewState={{ longitude: current[1], latitude: current[0], zoom: 14 }}
-        ref={mapRef}
-        mapLib={import("maplibre-gl")}
-        style={{ height: "85vh", width: "100%" }}
-        mapStyle="https://tiles.stadiamaps.com/styles/osm_bright.json"
+      <MapContainer
+        center={route[0]}
+        zoom={14}
+        whenCreated={(m) => (mapRef.current = m)}
+        style={{ height: "85vh", width: "100%" }} 
       >
-        <Source id="line" type="geojson" data={geojson}>
-          <Layer
-            id="line-layer"
-            type="line"
-            paint={{ "line-color": "#2563eb", "line-width": 4 }}
-          />
-        </Source>
-
-        <Marker latitude={current[0]} longitude={current[1]} />
-      </Map>
+        <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+        <Polyline positions={route} pathOptions={{ color: "#2563eb" }} />
+        <Marker position={route[idx]} />
+      </MapContainer>
 
       <div style={{ padding: "1rem", display: "flex", gap: "1rem" }}>
-        <button onClick={handleAsk} style={{ background: "#2563eb", color: "#fff", padding: "0.6rem 1.2rem", borderRadius: 6 }}>
+        <button
+          onClick={handleAsk}
+          style={{
+            background: "#2563eb",
+            color: "#fff",
+            border: "none",
+            padding: "0.6rem 1.2rem",
+            borderRadius: "6px",
+            cursor: "pointer",
+          }}
+        >
           Ask Coach
         </button>
         <span>{msg}</span>

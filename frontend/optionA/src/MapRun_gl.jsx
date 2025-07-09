@@ -4,34 +4,38 @@ import "maplibre-gl/dist/maplibre-gl.css";
 import { fetchStatus } from "./api";
 
 export default function MapRunGl() {
-  const [route, setRoute] = useState([]);      // [[lat,lng], …]
-  const [dur, setDur] = useState([]);          // durées ms
-  const [idx, setIdx] = useState(0);           // index courant
-  const [msg, setMsg] = useState("Loading…");
+  const [route, setRoute] = useState([]);  
+  const [dur,   setDur]   = useState([]);     
+  const [idx,   setIdx]   = useState(0);  
+  const [msg,   setMsg]   = useState("Loading…");
+  const [stats, setStats] = useState({ done_km: 0, remain_km: 0,
+                                       pace_now: 0, pace_avg: 0 });
   const timerRef = useRef(null);
 
-  /* Charger polyline + durations */
   useEffect(() => {
     fetch("http://localhost:8000/route")
       .then((r) => r.json())
       .then(({ line, dur }) => {
         setRoute(line);
         setDur(dur);
-        setMsg("Click Ask Coach");
         playSegment(0, line, dur);
       });
     return () => clearTimeout(timerRef.current);
   }, []);
 
-  /* Fonction récursive pour avancer à la bonne vitesse */
   function playSegment(i, line, durArr) {
     setIdx(i);
+
+    fetch(`http://localhost:8000/metrics/${i}`)
+      .then((r) => r.json())
+      .then(setStats)
+      .catch(console.error);
+
     timerRef.current = setTimeout(() => {
       playSegment((i + 1) % line.length, line, durArr);
     }, durArr[i]);
   }
 
-  /* Bouton Ask Coach */
   async function handleAsk() {
     try {
       const data = await fetchStatus(idx);
@@ -45,7 +49,8 @@ export default function MapRunGl() {
   const [lat, lng] = route[idx];
 
   return (
-    <div style={{ height: "100vh", width: "100vw", display: "flex", flexDirection: "column" }}>
+    <div style={{ height: "100vh", width: "100vw",
+                  display: "flex", flexDirection: "column" }}>
       <Map
         initialViewState={{ latitude: lat, longitude: lng, zoom: 14 }}
         mapStyle="https://tiles.stadiamaps.com/styles/alidade_smooth.json"
@@ -62,15 +67,26 @@ export default function MapRunGl() {
         <Marker latitude={lat} longitude={lng} />
       </Map>
 
-      <div style={{ padding: 16, display: "flex", gap: 16 }}>
+      {}
+      <div style={{ padding: 16, display: "flex", gap: 24,
+                    background: "#f5f5f5", alignItems: "center" }}>
         <button onClick={handleAsk}
                 style={{ background: "#2563eb", color: "#fff",
                          padding: "0.6rem 1.2rem", border: "none",
                          borderRadius: 6 }}>
           Ask Coach
         </button>
-        <span>{msg}</span>
+
+        <div>
+          <strong>Done :</strong> {stats.done_km} km&nbsp; |&nbsp;
+          <strong>To go :</strong> {stats.remain_km} km&nbsp; |&nbsp;
+          <strong>Pace now :</strong> {stats.pace_now} min/km&nbsp; |&nbsp;
+          <strong>Pace avg :</strong> {stats.pace_avg} min/km
+        </div>
       </div>
+
+      {}
+      <div style={{ padding: 12, fontStyle: "italic" }}>{msg}</div>
     </div>
   );
 }

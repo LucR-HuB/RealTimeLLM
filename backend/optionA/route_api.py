@@ -1,18 +1,3 @@
-# backend/optionA/route_api.py
-"""FastAPI backend – v2 (distance = géodésique)
-
-• /route  : renvoie la poly-ligne snappée + la durée *réelle* (ms) de chaque
-            micro-segment, calculée avec la distance haversine et le pace
-            présent dans l’Excel.
-• /status : identique (LLM via Ollama).
-
-Le fichier Excel doit comporter :
-    Lat | Lng | Actual_pace_min_per_km | Target_pace_min_per_km
-    Distance_done_m | Distance_remaining_m | (facultatif Runner / Address …)
-
-Aucun pas fixe (200 m) n’est supposé : les durées sont recalculées pour CHAQUE
-segment consécutif.
-"""
 from __future__ import annotations
 
 import logging
@@ -27,21 +12,14 @@ import requests
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from haversine import haversine  # pip install haversine
+from haversine import haversine 
 from pydantic import BaseModel
 
-###############################################################################
-# 1. Load Excel                                                               #
-###############################################################################
-ROOT = pathlib.Path(__file__).resolve().parents[2]  # …/RealTimeLLM
-EXCEL = ROOT / "data" / "Alex_run_data.xlsx"   # change here if needed
+ROOT = pathlib.Path(__file__).resolve().parents[2] 
+EXCEL = ROOT / "data" / "Alex_run_data.xlsx"  
 
 DATA = pd.read_excel(EXCEL, engine="openpyxl")
 RAW_ROUTE: List[List[float]] = DATA[["Lat", "Lng"]].values.tolist()
-
-###############################################################################
-# 2. Snap with OSRM (max 100 points, fallback)                                #
-###############################################################################
 
 def snapped_route(raw: List[List[float]]) -> List[List[float]]:
     max_wp = 100
@@ -64,9 +42,6 @@ def snapped_route(raw: List[List[float]]) -> List[List[float]]:
 
 SNAPPED_ROUTE: List[List[float]] = snapped_route(RAW_ROUTE)
 
-###############################################################################
-# 3. Durations – distance réelle × pace (sec/m)                               #
-###############################################################################
 pace_sec_per_m = DATA["Actual_pace_min_per_km"].values * 60 / 1000
 pace_cycle = np.resize(pace_sec_per_m, len(SNAPPED_ROUTE) - 1)
 
@@ -74,10 +49,7 @@ durations_ms: List[int] = []
 for i in range(len(SNAPPED_ROUTE) - 1):
     d_m = haversine(SNAPPED_ROUTE[i], SNAPPED_ROUTE[i + 1]) * 1000
     durations_ms.append(int(d_m * pace_cycle[i] * 1000))
-
-###############################################################################
-# 4. LLM helper                                                               #
-###############################################################################
+    
 SYSTEM_PROMPT = (
     "You are an enthusiastic, concise running coach. "
     "Answer in ONE sentence (≤25 words). No extra text."
@@ -97,9 +69,6 @@ def ask_ollama(prompt: str, model: str = "gemma:latest") -> str:
                          capture_output=True, timeout=180)
     return res.stdout.strip().split("\n")[0]
 
-###############################################################################
-# 5. FastAPI                                                                  #
-###############################################################################
 app = FastAPI(title="Realtime LLM Coach – Option A – v2")
 app.add_middleware(
     CORSMiddleware,
@@ -125,3 +94,45 @@ def status(req: LLMRequest):
 def route():
     """Polyline snappée + durées (ms) pour chaque micro-segment."""
     return JSONResponse({"line": SNAPPED_ROUTE, "dur": durations_ms})
+
+@app.get("/metrics/{idx}")
+def metrics(idx: int):
+    """
+    Renvoie les stats pour la ligne `idx`
+    sans appeler le LLM.
+    """
+    if not 0 <= idx < len(DATA):
+        return {"error": "index out of range"}
+
+    done_m  = float(DATA.Distance_done_m.iloc[idx])
+    remain_m = float(DATA.Distance_remaining_m.iloc[idx])
+    pace_now = float(DATA.Actual_pace_min_per_km.iloc[idx])
+    pace_avg = float(DATA.Actual_pace_min_per_km.iloc[: idx + 1].mean())
+
+    return {
+        "done_km": round(done_m / 1000, 2),
+        "remain_km": round(remain_m / 1000, 2),
+        "pace_now": round(pace_now, 2),
+        "pace_avg": round(pace_avg, 2),
+    }
+    
+from pydantic import BaseModel
+
+class CoachIn(BaseModel):
+    done_km:   float
+    remain_km: float
+    pace_now:  float
+
+@app.post("/coach")
+def coach(data: CoachIn):
+    prompt = (
+        f"{SYSTEM_PROMPT}\n\n"
+        f"Distance run : {data.done_km:.1f} km\n"
+        f"Distance left: {data.remain_km:.1f} km\n"
+        f"Current pace : {data.pace_now:.2f} min/km\n"
+    )
+    try:
+        msg = ask_ollama(prompt)
+    except Exception as err:
+        msg = f"Model error: {err}"
+    return {"message": msg}
