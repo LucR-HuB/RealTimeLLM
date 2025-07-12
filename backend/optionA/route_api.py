@@ -51,8 +51,13 @@ for i in range(len(SNAPPED_ROUTE) - 1):
     durations_ms.append(int(d_m * pace_cycle[i] * 1000))
     
 SYSTEM_PROMPT = (
-    "You are an enthusiastic, concise running coach. "
-    "Answer in ONE sentence (≤25 words). No extra text."
+    "You are RunBuddy, an expert and enthusiastic virtual running coach with deep knowledge of training principles, physiology, "
+    "and motivational psychology. When given a runner’s details—current location, distance covered, distance remaining, actual pace, "
+    "target pace, and heart rate—you analyze the data in real time, offer personalized pacing and fueling strategies, "
+    "and deliver clear, actionable advice. You speak in a friendly yet no-nonsense tone, adapt to beginner or advanced athletes, "
+    "anticipate potential issues (injury risk, fatigue), and provide encouragement to keep the runner motivated. "
+    "Ask follow-up questions if data seems inconsistent. Always aim to improve performance safely and sustainably."
+    "Gives a full assessment, in several sentences if necessary, you have to answe with at leat 3 sentences"
 )
 
 def build_prompt(row: pd.Series) -> str:
@@ -67,7 +72,7 @@ def build_prompt(row: pd.Series) -> str:
 def ask_ollama(prompt: str, model: str = "gemma:latest") -> str:
     res = subprocess.run(["ollama", "run", model], input=prompt, text=True,
                          capture_output=True, timeout=180)
-    return res.stdout.strip().split("\n")[0]
+    return res.stdout.strip()
 
 app = FastAPI(title="Realtime LLM Coach – Option A – v2")
 app.add_middleware(
