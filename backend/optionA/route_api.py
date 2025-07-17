@@ -1,9 +1,9 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from .ollama_wrapper import build_prompt, ask_ollama 
+from .ollama_wrapper import build_prompt, ask_ollama
 
-app = FastAPI(title="Realtime LLM Coach – v3 (clean)")
+app = FastAPI(title="Realtime LLM Coach – v3 (HR)")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:5173"],
@@ -15,7 +15,7 @@ class CoachIn(BaseModel):
     done_km:   float
     remain_km: float
     pace_now:  float
-    heart_rate: float | None = None  # optionnel
+    heart_rate: int | None = None 
 
 @app.post("/coach")
 def coach(data: CoachIn):

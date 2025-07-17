@@ -12,16 +12,17 @@ SYSTEM_PROMPT = (
 )
 
 
-def build_prompt(*, done_km: float, remain_km: float, pace_now: float, heart_rate: float | None = None) -> str:
-    text = (
+def build_prompt(*, done_km: float, remain_km: float,
+                 pace_now: float, heart_rate: int | None = None) -> str:
+    prompt = (
         f"{SYSTEM_PROMPT}\n\n"
         f"Distance run   : {done_km:.1f} km\n"
         f"Distance left  : {remain_km:.1f} km\n"
         f"Current pace   : {pace_now:.2f} min/km\n"
     )
     if heart_rate is not None:
-        text += f"Heart rate     : {heart_rate:.0f} bpm\n"
-    return text
+        prompt += f"Heart rate    : {heart_rate} bpm\n"
+    return prompt
 
 def ask_ollama(prompt: str, model: str = "gemma:latest") -> str:
     res = subprocess.run(
