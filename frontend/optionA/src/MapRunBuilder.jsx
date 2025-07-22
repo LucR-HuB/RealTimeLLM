@@ -38,39 +38,43 @@ export default function MapRunBuilder() {
   );
   async function buildRoute() {
     if (!segments.length) return alert("Trace au moins un segment !");
-    const line = [];
-    const dur  = [];
-    const distCum = [0];
-
+  
+    const line      = [];
+    const dur       = [];
+    const distCum   = [0];
+    const paceArr   = [];                // ← NEW : pace cible par micro-segment
+  
     for (const seg of segments) {
       const coords = `${seg.start.lng},${seg.start.lat};${seg.end.lng},${seg.end.lat}`;
-      const url = `https://router.project-osrm.org/route/v1/foot/${coords}?overview=full&geometries=geojson`;
-
+      const url    = `https://router.project-osrm.org/route/v1/foot/${coords}?overview=full&geometries=geojson`;
+  
       let js;
-      try { js = await fetch(url).then((r) => r.json()); }
+      try { js = await fetch(url).then(r => r.json()); }
       catch { return alert("Erreur réseau OSRM"); }
       if (!js?.routes?.length) return alert("OSRM n'a pas renvoyé d'itinéraire.");
-
-      const subLine = js.routes[0].geometry.coordinates.map(([lng, lat]) => [lat, lng]);
-      const pace_s_m = seg.pace * 60 / 1000;        
-      const startIdx = line.length ? 1 : 0;
+  
+      const subLine   = js.routes[0].geometry.coordinates.map(([lng,lat]) => [lat,lng]);
+      const pace_s_m  = seg.pace * 60 / 1000;
+      const startIdx  = line.length ? 1 : 0;     // évite de dupliquer le 1er point
+  
       for (let i = startIdx; i < subLine.length; i++) line.push(subLine[i]);
-
+  
       for (let i = 0; i < subLine.length - 1; i++) {
         const d_m = haversine(
-          [subLine[i][1],     subLine[i][0]],
-          [subLine[i + 1][1], subLine[i + 1][0]]
+          [subLine[i][1], subLine[i][0]],
+          [subLine[i+1][1], subLine[i+1][0]]
         );
         distCum.push(distCum.at(-1) + d_m);
-        dur.push(Math.max(200, Math.round(d_m * pace_s_m * 1000)));  
+        dur.push(Math.max(200, Math.round(d_m * pace_s_m * 1000)));
+        paceArr.push(seg.pace);          // ← pace objectif stocké ici
       }
     }
-
-    const totalMin = dur.reduce((a, b) => a + b, 0) / 60000;
-    const totalKm  = distCum.at(-1) / 1000;
-    const paceMean = totalMin / totalKm || 0;
-
-    setSession({ line, dur, distCum, pace: paceMean, segments });
+  
+    const totalMin  = dur.reduce((a,b)=>a+b,0) / 60000;
+    const totalKm   = distCum.at(-1) / 1000;
+    const paceMean  = totalMin / totalKm || 0;
+  
+    setSession({ line, dur, distCum, paceArr, paceAvg: paceMean });
   }
 
   const reset = () => {
