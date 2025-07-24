@@ -12,16 +12,42 @@ SYSTEM_PROMPT = (
 )
 
 
-def build_prompt(*, done_km: float, remain_km: float,
-                 pace_now: float, heart_rate: int | None = None) -> str:
+def build_prompt(
+    *,
+    done_km: float,
+    remain_km: float,
+    time_run_min: float,
+    pace_now: float,
+    pace_obj: float,
+    pace_avg: float,
+    pace_gap: float,
+    next_change_km: float,
+    time_next_change_min: float,        
+    time_next_change_obj_min: float,    
+    eta_gap_min: float,                 
+    pace_cv: float,
+    heart_rate: int | None = None,
+    hr_avg: int | None = None,
+) -> str:
     prompt = (
         f"{SYSTEM_PROMPT}\n\n"
         f"Distance run   : {done_km:.1f} km\n"
         f"Distance left  : {remain_km:.1f} km\n"
+        f"Elapsed time       : {time_run_min:.1f} min\n"
         f"Current pace   : {pace_now:.2f} min/km\n"
+        f"Target pace    : {pace_obj:.2f} min/km\n"
+        f"Pace gap           : {pace_gap:+.2f} min/km\n"
+        f"ETA to next change(real) : {time_next_change_min:.1f} min\n"
+        f"ETA to next change (target) : {time_next_change_obj_min:.1f} min\n"
+        f"ETA gap                     : {eta_gap_min:+.1f} min\n"
+        f"Pace variability (CV)       : {pace_cv:.3f}\n"
+        f"Average pace   : {pace_avg:.2f} min/km\n"
+        f"Next pace change in : {next_change_km:.1f} km\n"
     )
     if heart_rate is not None:
         prompt += f"Heart rate    : {heart_rate} bpm\n"
+    if hr_avg is not None:
+        prompt += f"Heart rate average        : {hr_avg} bpm\n"
     return prompt
 
 def ask_ollama(prompt: str, model: str = "gemma:latest") -> str:

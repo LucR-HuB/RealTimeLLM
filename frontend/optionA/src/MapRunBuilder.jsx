@@ -42,7 +42,7 @@ export default function MapRunBuilder() {
     const line      = [];
     const dur       = [];
     const distCum   = [0];
-    const paceArr   = [];                // ← NEW : pace cible par micro-segment
+    const paceArr   = [];               
   
     for (const seg of segments) {
       const coords = `${seg.start.lng},${seg.start.lat};${seg.end.lng},${seg.end.lat}`;
@@ -55,7 +55,7 @@ export default function MapRunBuilder() {
   
       const subLine   = js.routes[0].geometry.coordinates.map(([lng,lat]) => [lat,lng]);
       const pace_s_m  = seg.pace * 60 / 1000;
-      const startIdx  = line.length ? 1 : 0;     // évite de dupliquer le 1er point
+      const startIdx  = line.length ? 1 : 0;   
   
       for (let i = startIdx; i < subLine.length; i++) line.push(subLine[i]);
   
@@ -66,7 +66,7 @@ export default function MapRunBuilder() {
         );
         distCum.push(distCum.at(-1) + d_m);
         dur.push(Math.max(200, Math.round(d_m * pace_s_m * 1000)));
-        paceArr.push(seg.pace);          // ← pace objectif stocké ici
+        paceArr.push(seg.pace);         
       }
     }
   

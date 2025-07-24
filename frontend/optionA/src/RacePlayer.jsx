@@ -4,7 +4,6 @@ import "maplibre-gl/dist/maplibre-gl.css";
 import { fetchCoach } from "./api";
 import Dashboard from "./Dashboard";
 
-/* palette couleur selon le pace objectif (min/km) */
 const paceExpr = [
   "case",
   ["<", ["get", "pace"], 4], "#d73027",
@@ -13,13 +12,11 @@ const paceExpr = [
   "#91cf60",
 ];
 
-/* interpolation entre deux points {lat,lng} */
 const lerp = (a, b, t) => ({
   lat: a.lat + (b.lat - a.lat) * t,
   lng: a.lng + (b.lng - a.lng) * t,
 });
 
-/* tirage gaussien ~ N(0, 1) */
 const randn = () => {
   let u = 0, v = 0;
   while (u === 0) u = Math.random();
@@ -27,63 +24,56 @@ const randn = () => {
   return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
 };
 
-const SIGMA_PACE   = 0.05;   // écart-type du bruit pace (min/km) ≈3 s/km
-const SIGMA_HR     = 3;      // écart-type du bruit HR (bpm)
-const UPDATE_MS    = 5000;   // cadence des mesures « réelles »
-const MAX_POINTS   = 300;    // historique HR maximal
-
+const SIGMA_PACE   = 0.05;  
+const SIGMA_HR     = 3;      
+const UPDATE_MS    = 5000;   
+const MAX_POINTS   = 300;   
 export default function RacePlayer({
   line,
   dur,
   distCum,
-  paceArr,      // pace objectif par micro-segment
+  paceArr,      
   paceAvg,
   segments = [],
   onReset,
 }) {
-  /* états réactifs */
-  const [idx,      setIdx]      = useState(0);               // index du micro-segment
+  const [idx,      setIdx]      = useState(0);              
   const [pos,      setPos]      = useState({ lat: line[0][0], lng: line[0][1] });
   const [paceReal, setPaceReal] = useState(paceArr[0]);
   const [paceHist, setPaceHist] = useState([{ t: 0, pace: paceArr[0] }]);
-  const [hrHist,   setHrHist]   = useState([]);              // [{t,hr}, …]
+  const [hrHist,   setHrHist]   = useState([]);           
   const [msg,      setMsg]      = useState("");
+  const [timeSec,  setTimeSec]  = useState(0); 
 
-  /* refs (persistantes) */
   const timerRef       = useRef(null);
-  const lastUpdateRef  = useRef(0);      // dernière MAJ pace/HR
+  const lastUpdateRef  = useRef(0);     
   const paceRealRef    = useRef(paceArr[0]);
 
-  /* tableau des temps cumulés → recherche rapide de l’index courant */
   const cumTimes = useMemo(
     () => dur.reduce((a, d) => [...a, a.at(-1) + d], [0]).slice(1),
     [dur]
   );
 
-  /* ─────────── boucle temps-réel ─────────── */
   useEffect(() => {
     const t0 = performance.now();
 
     timerRef.current = setInterval(() => {
       const elapsed = performance.now() - t0;
 
-      /* --- trouver le micro-segment courant --- */
       const i = cumTimes.findIndex((t) => elapsed < t);
       if (i === -1) { clearInterval(timerRef.current); return; }  // course terminée
       setIdx(i);
+      setTimeSec(Math.floor(elapsed / 1000));
 
-      /* --- interp. position pour animer proprement --- */
       const tPrev = i === 0 ? 0 : cumTimes[i - 1];
       const r     = (elapsed - tPrev) / (cumTimes[i] - tPrev);
       const curr  = line[i];
       const next  = line[i + 1] ?? curr;
       setPos(lerp({ lat: curr[0], lng: curr[1] }, { lat: next[0], lng: next[1] }, r));
 
-      /* --- toutes les 5 s : nouveau pace réel + HR --- */
       if (elapsed - lastUpdateRef.current >= UPDATE_MS) {
-        /* pace réel : on se rapproche du pace objectif, plus un bruit gaussien */
         const paceObj    = paceArr[i];
-        const drift      = 0.25 * (paceObj - paceRealRef.current);   // rapprochement progressif
+        const drift      = 0.25 * (paceObj - paceRealRef.current);   
         const noise      = randn() * SIGMA_PACE;
         const newPace    = Math.max(3, paceRealRef.current + drift + noise);
 
@@ -91,7 +81,6 @@ export default function RacePlayer({
         setPaceReal(newPace);
         setPaceHist(h => [...h.slice(-MAX_POINTS + 1), { t: Math.floor(elapsed / 1000), pace: newPace }]); // NEW
 
-        /* HR simulée cohérente avec ce nouveau pace réel */
         const doneKm  = distCum[i] / 1000;
         const totalKm = distCum.at(-1) / 1000;
         const base    = 120 + (5 - newPace) * 10 + (doneKm / totalKm) * 25;
@@ -112,18 +101,45 @@ export default function RacePlayer({
 
         lastUpdateRef.current = elapsed;
       }
-    }, 200);     // ≈5 FPS pour l’animation
+    }, 200);    
 
     return () => clearInterval(timerRef.current);
   }, [cumTimes, line, paceArr, distCum]);
 
-  /* valeurs instantanées pour le dashboard */
   const done_km   = distCum[idx] / 1000;
   const remain_km = (distCum.at(-1) - distCum[idx]) / 1000;
   const pace_obj  = paceArr[idx];
   const hr_now    = hrHist.at(-1)?.hr ?? 120;
+  const time_min  = timeSec / 60; 
+  const pace_gap  = paceReal - pace_obj;
+  const dist_next_km = (() => {
+  const paceNow = paceArr[idx];
+  let j = idx + 1;
+  while (j < paceArr.length && paceArr[j] === paceNow) j++;
+  const distNow  = distCum[idx];
+  const distNext = j < distCum.length ? distCum[j] : distCum.at(-1);
+  return (distNext - distNow) / 1000;
+  })();
+  const time_next_change_min = dist_next_km * paceReal;          
+  const time_next_change_sec = Math.round(time_next_change_min * 60);
+  const time_next_change_obj_min  = dist_next_km * pace_obj;
+  const time_next_change_obj_sec  = Math.round(time_next_change_obj_min * 60);
+  const eta_gap_min  = time_next_change_min - time_next_change_obj_min;
+  const eta_gap_sec  = time_next_change_sec - time_next_change_obj_sec;
+  const pace_cv = useMemo(() => {
+    if (paceHist.length < 3) return 0;
+    const mean = paceHist.reduce((s, p) => s + p.pace, 0) / paceHist.length;
+    const var_ =
+    paceHist.reduce((s, p) => s + (p.pace - mean) ** 2, 0) / (paceHist.length - 1);
+    return var_ > 0 ? Math.sqrt(var_) / mean : 0;
+  }, [paceHist]);
+  const hr_avg = useMemo(() => {
+    if (hrHist.length === 0) return hr_now;
+    return Math.round(
+    hrHist.reduce((s, p) => s + p.hr, 0) / hrHist.length
+    );
+  }, [hrHist, hr_now]);
 
-  /* GeoJSON segments colorés */
   const geoSegs = useMemo(
     () => ({
       type: "FeatureCollection",
@@ -142,14 +158,23 @@ export default function RacePlayer({
     [segments]
   );
 
-  /* bouton Ask Coach */
   async function handleAsk() {
     try {
       const res = await fetchCoach({
         done_km,
         remain_km,
+        next_change_km: dist_next_km,
+        time_next_change_obj_min,
         pace_now: paceReal,
+        pace_obj,
+        pace_avg: paceAvg,
+        time_next_change_min,
+        pace_gap,
+        eta_gap_min,
+        time_run_min: time_min,
         heart_rate: hr_now,
+        pace_cv,
+        hr_avg,
       });
       setMsg(res.message);
     } catch (err) {
@@ -157,17 +182,16 @@ export default function RacePlayer({
     }
   }
 
-  /* ───────────── UI ───────────── */
   return (
     <div style={{ display: "flex", height: "100vh", width: "100vw" }}>
-      {/* ===== MAP ===== */}
+      {}
       <Map
         initialViewState={{ latitude: pos.lat, longitude: pos.lng, zoom: 14 }}
         mapStyle="https://tiles.stadiamaps.com/styles/alidade_smooth.json"
         mapLib={import("maplibre-gl")}
         style={{ flex: 1 }}
       >
-        {/* tracé principal */}
+        {}
         <Source id="route" type="geojson"
           data={{ type: "LineString", coordinates: line.map(([la, ln]) => [ln, la]) }}
         >
@@ -175,7 +199,7 @@ export default function RacePlayer({
                  paint={{ "line-color": "#5fa5ff", "line-width": 2 }} />
         </Source>
 
-        {/* segments colorés */}
+        {}
         {segments.length > 0 && (
           <Source id="segs" type="geojson" data={geoSegs}>
             <Layer id="segs-line" type="line"
@@ -183,7 +207,7 @@ export default function RacePlayer({
           </Source>
         )}
 
-        {/* étiquettes pace */}
+        {}
         {segments.map((s, i) => {
           const midLat = (s.start.lat + s.end.lat) / 2;
           const midLng = (s.start.lng + s.end.lng) / 2;
@@ -203,7 +227,7 @@ export default function RacePlayer({
           );
         })}
 
-        {/* icône coureur */}
+        {}
         <Marker latitude={pos.lat} longitude={pos.lng} />
       </Map>
 
@@ -217,9 +241,17 @@ export default function RacePlayer({
         paceHist={paceHist} 
         hr_now={hr_now}
         hrHist={hrHist}
+        dist_next_km={dist_next_km}
+        time_next_change_sec={time_next_change_sec}
+        timeSec={timeSec}
+        time_next_change_obj_sec={time_next_change_obj_sec}
+        eta_gap_sec={eta_gap_sec}
+        pace_gap={pace_gap}
+        pace_cv={pace_cv}
+        hr_avg={hr_avg}
       />
 
-      {/* barre d’actions */}
+      {}
       <div style={{
         position: "absolute", left: 0, right: 300, bottom: 0,
         padding: 16, background: "#f5f5f5",
@@ -235,7 +267,7 @@ export default function RacePlayer({
         </div>
       </div>
 
-      {/* réponse LLM */}
+      {}
       {msg && (
         <div style={{
           position: "absolute", right: 300, bottom: 60,
