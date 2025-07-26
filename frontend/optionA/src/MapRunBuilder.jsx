@@ -73,7 +73,7 @@ export default function MapRunBuilder() {
     const totalMin  = dur.reduce((a,b)=>a+b,0) / 60000;
     const totalKm   = distCum.at(-1) / 1000;
     const paceMean  = totalMin / totalKm || 0;
-  
+    await fetch("http://localhost:8000/start", { method: "POST" });
     setSession({ line, dur, distCum, paceArr, paceAvg: paceMean });
   }
 

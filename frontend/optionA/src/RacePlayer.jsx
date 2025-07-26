@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import Map, { Marker, Source, Layer } from "react-map-gl/maplibre";
 import "maplibre-gl/dist/maplibre-gl.css";
-import { fetchCoach } from "./api";
+import { fetchCoach, sendTick } from "./api";
 import Dashboard from "./Dashboard";
 
 const paceExpr = [
@@ -98,8 +98,35 @@ export default function RacePlayer({
           ...h.slice(-MAX_POINTS + 1),
           { t: Math.floor(elapsed / 1000), hr: hrSim },
         ]);
+        const doneKmTick    = distCum[i] / 1000;
+        const remainKmTick  = (distCum.at(-1) - distCum[i]) / 1000;
+        const paceObjTick   = paceArr[i];
+        const paceGapTick   = paceRealRef.current - paceObjTick;
+        const distNextKm    = (() => {
+        let j = i + 1;
+        while (j < paceArr.length && paceArr[j] === paceObjTick) j++;
+        return ( (j < distCum.length ? distCum[j] : distCum.at(-1)) - distCum[i] ) / 1000;
+           })();
+        const timeNextReal  = distNextKm * paceRealRef.current;
+        const timeNextObj   = distNextKm * paceObjTick;
+        const etaGapMin     = timeNextReal - timeNextObj;
 
         lastUpdateRef.current = elapsed;
+        sendTick({
+          done_km:               doneKmTick,
+          remain_km:             remainKmTick,
+          pace_now:              paceRealRef.current,
+          next_change_km:        distNextKm,
+          pace_obj:              paceObjTick,
+          pace_avg:              paceAvg,
+          pace_gap:              paceGapTick,
+          time_next_change_min:  timeNextReal,
+          heart_rate:            hrSim,
+          time_next_change_obj_min: timeNextObj,
+          time_run_min:          timeSec / 60,
+          eta_gap_min:           etaGapMin,
+          pace_cv:               pace_cv,
+        }).catch(() => {});
       }
     }, 200);    
 
@@ -257,7 +284,16 @@ export default function RacePlayer({
         padding: 16, background: "#f5f5f5",
         display: "flex", gap: 24, alignItems: "center",
       }}>
-        <button onClick={onReset}>Reset</button>
+       <button
+          onClick={async () => {
+            try {
+              await fetch("http://localhost:8000/end", { method: "POST" });
+            } catch {}
+            onReset();
+          }}
+        >
+          Reset
+        </button>
         <button onClick={handleAsk}>Ask Coach</button>
         <div>
           <strong>Obj:</strong> {pace_obj.toFixed(2)}&nbsp;|&nbsp;
