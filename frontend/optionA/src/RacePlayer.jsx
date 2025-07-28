@@ -62,7 +62,6 @@ export default function RacePlayer({
     timerRef.current = setInterval(() => {
       const elapsed = performance.now() - t0;
 
-      /* — progress along the polyline — */
       const i = cumTimes.findIndex(t => elapsed < t);
       if (i === -1) { clearInterval(timerRef.current); return; }
       setIdx(i);
@@ -100,7 +99,6 @@ export default function RacePlayer({
           { t: Math.floor(elapsed / 1000), hr: hrSim },
         ]);
 
-        /* 2) calculs back-end */
         const remainKm = (distCum.at(-1) - distCum[i]) / 1000;
         const paceGap  = newPace - paceObj;
 
