@@ -1,21 +1,20 @@
-from dataclasses import dataclass
-from typing import Callable, Dict, Any
+# optionA/triggers/registry.py
+from typing import Callable, Any, NamedTuple
 
-from .checks  import is_new_km, pace_too_slow
-from .prompts import prompt_new_km, prompt_pace_slow
-from ..route_api import CoachIn         
-from ..models import CoachIn 
+from .checks   import is_run_start, is_new_km, pace_too_slow
+from .prompts  import (
+    prompt_run_start,
+    prompt_new_km,
+    prompt_pace_slow,
+)
 
-CheckFn   = Callable[[CoachIn], bool]
-PromptFn  = Callable[[Dict[str, Any]], str]
-
-@dataclass
-class Trigger:
+class Trigger(NamedTuple):
     name:   str
-    check:  CheckFn
-    prompt: PromptFn
+    check:  Callable[[Any], bool]
+    prompt: Callable[[dict, dict | None], str]
 
 TRIGGERS = [
-    Trigger("NEW_KM",     is_new_km,     prompt_new_km),
-    Trigger("PACE_SLOW",  pace_too_slow, prompt_pace_slow),
+    Trigger("RUN_START", is_run_start,  prompt_run_start),
+    Trigger("NEW_KM",    is_new_km,     prompt_new_km),
+    Trigger("PACE_SLOW", pace_too_slow, prompt_pace_slow),
 ]
