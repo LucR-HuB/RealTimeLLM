@@ -2,8 +2,6 @@
 This project delivers a **fully-local personal running coach**.  
 It listens to a live stream of running metrics (distance, pace, heart-rate, etc.), maintains an in-memory model of the session and, when appropriate, asks a Large Language Model—served on-device by **Ollama**—to write a coaching message that is returned to the runner within a second.
 
-Unlike conventional running apps that replay canned sentences or upload data to the cloud, all computation (API, statistics, rule engine, LLM inference) stays on the runner’s computer.  No external network traffic means low latency and zero privacy concerns.
-
 ---
 <!-- Demo visuals -->
 ![Start briefing](docs/images/Pre-Race_Briefing.png)
@@ -78,7 +76,6 @@ Every trigger in `optionA/triggers/prompts.py` builds its prompt by concatenatin
 
 Example — *pace drop*:
 
-```python
 def prompt_pace_slow(data: dict, *_):
     header = "=== Pace Alert ===\n"
     core   = build_prompt(**data)
