@@ -5,6 +5,31 @@ It listens to a live stream of running metrics (distance, pace, heart-rate, etc.
 Unlike conventional running apps that replay canned sentences or upload data to the cloud, all computation (API, statistics, rule engine, LLM inference) stays on the runner’s computer.  No external network traffic means low latency and zero privacy concerns.
 
 ---
+<!-- Demo visuals -->
+![Start briefing](docs/img/Pre-Race_Briefing.png)
+
+> Start briefing
+
+![Kilometre split](docs/img/1km.png)
+
+![Kilometre split](docs/img/2km.png)
+
+> Kilometre split
+
+![Ask Coach](docs/img/AskCoach1.png)
+
+![Ask Coach](docs/img/AskCoach2.png)
+
+> Ask Coach: tap for instant, personalized guidance.
+
+![Pace alert](docs/img/increasespeed.png)
+
+> Pace alert
+
+![Final summary](docs/img/Postrace.png)
+
+> Final recap
+---
 
 ## 1  Conceptual Flow
 1. **Sampling** – the client (mobile or web) posts a JSON “tick” every second or every few metres.  
