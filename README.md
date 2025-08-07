@@ -6,27 +6,25 @@ Unlike conventional running apps that replay canned sentences or upload data to 
 
 ---
 <!-- Demo visuals -->
-![Start briefing](docs/img/Pre-Race_Briefing.png)
+![Start briefing](docs/images/Pre-Race_Briefing.png)
 
 > Start briefing
 
-![Kilometre split](docs/img/1km.png)
-
-![Kilometre split](docs/img/2km.png)
+![Kilometre split – 1 km](docs/images/1km.png)
+![Kilometre split – 2 km](docs/images/2km.png)
 
 > Kilometre split
 
-![Ask Coach](docs/img/AskCoach1.png)
-
-![Ask Coach](docs/img/AskCoach2.png)
+![Ask Coach](docs/images/AskCoach1.png)
+![Ask Coach (alt)](docs/images/AskCoach2.png)
 
 > Ask Coach: tap for instant, personalized guidance.
 
-![Pace alert](docs/img/increasespeed.png)
+![Pace alert](docs/images/increasespeed.png)
 
 > Pace alert
 
-![Final summary](docs/img/Postrace.png)
+![Final summary](docs/images/Postrace.png)
 
 > Final recap
 ---
